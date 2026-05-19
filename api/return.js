@@ -47,7 +47,7 @@ module.exports = async (req, res) => {
       page_id: bookId,
       properties: {
         "貸出状況":   { select: { name: "貸出可能" } },
-        "現在の借り手": { rich_text: [] },
+        "借り手名": { rich_text: [] },
         "貸出開始日":   { date: null },
       },
     });
