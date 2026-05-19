@@ -484,9 +484,12 @@
       selectedBook.status = '貸出中';
       renderBooks(filterCurrentBooks());
 
+      const due = new Date();
+      due.setMonth(due.getMonth() + 2);
+      const dueStr = `${due.getFullYear()}年${due.getMonth() + 1}月${due.getDate()}日`;
       document.getElementById('sheetContent').innerHTML = `
         <h2 style="margin-bottom:10px">${esc(selectedBook.title)}</h2>
-        <div class="book-meta" style="margin-bottom:20px">貸出が完了しました。どうぞお楽しみください。</div>
+        <div class="book-meta" style="margin-bottom:20px">貸出が完了しました。返却期限は${dueStr}です。</div>
         <div class="action-buttons">
           <button class="btn btn-ghost" onclick="closeSheet()">閉じる</button>
         </div>
