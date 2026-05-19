@@ -18,7 +18,7 @@ module.exports = async (req, res) => {
       filter: {
         and: [
           { property: "書名",     relation: { contains: bookId } },
-          { property: "ステータス", select: { equals: "貸出中" } },
+          { property: "貸出状況", select: { equals: "貸出中" } },
         ],
       },
     });
@@ -40,7 +40,7 @@ module.exports = async (req, res) => {
       page_id: record.id,
       properties: {
         "返却日":   { date: { start: today } },
-        "ステータス": { select: { name: "返却済" } },
+        "貸出状況": { select: { name: "返却済" } },
       },
     });
 
@@ -48,8 +48,8 @@ module.exports = async (req, res) => {
     await notion.pages.update({
       page_id: bookId,
       properties: {
-        "ステータス":   { select: { name: "貸出可能" } },
-        "現在の借り手": { rich_text: [] },
+        "貸出状況":   { select: { name: "貸出可能" } },
+        "借り手名": { rich_text: [] },
         "貸出開始日":   { date: null },
       },
     });
