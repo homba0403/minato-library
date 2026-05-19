@@ -14,8 +14,8 @@ module.exports = async (req, res) => {
       author:   page.properties["著者"]?.rich_text[0]?.plain_text ?? "",
       category: page.properties["カテゴリ"]?.select?.name ?? "",
       status:   page.properties["貸出状況"]?.select?.name ?? "不明",
-      borrower: page.properties["現在の借り手"]?.rich_text[0]?.plain_text ?? "",
-      comment:  page.properties["太郎のひとこと"]?.rich_text[0]?.plain_text ?? "",
+      borrower: page.properties["借り手名"]?.rich_text[0]?.plain_text ?? "",
+      comment:  page.properties["紹介文"]?.rich_text[0]?.plain_text ?? "",
       cover:
         page.properties["表紙画像"]?.files[0]?.file?.url ??
         page.properties["表紙画像"]?.files[0]?.external?.url ??
