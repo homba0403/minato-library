@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
         "書名":     { relation: [{ id: bookId }] },
         "借り手名": { rich_text: [{ text: { content: borrowerName } }] },
         "貸出日":   { date: { start: today } },
-        "ステータス": { select: { name: "貸出中" } },
+        "貸出状況": { select: { name: "貸出中" } },
         "返却PIN":  { rich_text: [{ text: { content: pin } }] },
       },
     });
