@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>港の図書室 | enoto</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500&family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary:       #166377;
+      --primary-dark:  #0e4556;
+      --primary-light: #e4f0f3;
+      --bg:            #f2f7f8;
+      --surface:       #ffffff;
+      --text:          #1a2e35;
+      --muted:         #5a7a85;
+      --border:        #c6d9de;
+      --available-bg:  #e0eff2;
+      --available-fg:  #0e4556;
+      --borrowed-bg:   #f5ecd8;
+      --borrowed-fg:   #6b4a00;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Noto Sans JP", sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 28px 20px 32px;
+    }
+    header h1 {
+      font-family: "Shippori Mincho", serif;
+      font-size: 1.5rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      margin-bottom: 10px;
+    }
+    .curator-block {
+      border-top: 1px solid rgba(255,255,255,0.25);
+      padding-top: 14px;
+      margin-top: 14px;
+      font-size: 0.82rem;
+      line-height: 1.8;
+      opacity: 0.88;
+    }
+    .curator-block-label {
+      font-size: 0.70rem;
+      letter-spacing: 0.08em;
+      opacity: 0.72;
+      margin-bottom: 4px;
+    }
+    .controls {
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .controls input,
+    .controls select {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.88rem;
+      background: var(--bg);
+      color: var(--text);
+      font-family: inherit;
+    }
+    .controls input { flex: 1; }
+    .book-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+      gap: 14px;
+      padding: 18px 16px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .book-card {
+      background: var(--surface);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .book-card:active { opacity: 0.85; }
+    .book-cover {
+      width: 100%;
+      aspect-ratio: 2/3;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .book-cover img { width: 100%; height: 100%; object-fit: cover; }
+    .book-cover-placeholder {
+      font-family: "Shippori Mincho", serif;
+      font-size: 1.4rem;
+      color: var(--primary);
+      opacity: 0.25;
+    }
+    .book-info { padding: 10px 10px 12px; }
+    .book-title {
+      font-size: 0.84rem;
+      font-weight: 500;
+      line-height: 1.45;
+      margin-bottom: 3px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .book-author { font-size: 0.74rem; color: var(--muted); margin-bottom: 7px; }
+    .badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .badge-available { background: var(--available-bg); color: var(--available-fg); }
+    .badge-borrowed  { background: var(--borrowed-bg);  color: var(--borrowed-fg); }
+    .loading, .empty {
+      text-align: center;
+      padding: 60px 16px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      grid-column: 1 / -1;
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(14,69,86,0.45);
+      z-index: 100;
+      align-items: flex-end;
+    }
+    .overlay.open { display: flex; }
+    .sheet {
+      background: var(--surface);
+      border-radius: 16px 16px 0 0;
+      width: 100%;
+      max-height: 92vh;
+      overflow-y: auto;
+      padding: 16px 20px 52px;
+    }
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 18px;
+    }
+    .sheet h2 {
+      font-family: "Shippori Mincho", serif;
+      font-size: 1.1rem;
+      font-weight: 500;
+      line-height: 1.5;
+      margin-bottom: 3px;
+    }
+    .book-meta { font-size: 0.82rem; color: var(--muted); margin-bottom: 18px; }
+    .curator-comment {
+      background: var(--primary-light);
+      border-left: 3px solid var(--primary);
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      font-size: 0.84rem;
+      line-height: 1.75;
+      border-radius: 0 6px 6px 0;
+    }
+    .curator-comment-label {
+      font-size: 0.70rem;
+      color: var(--primary);
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+    .reviews-label {
+      font-size: 0.76rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+    }
+    .review-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.84rem;
+      line-height: 1.7;
+    }
+    .review-item:last-child { border-bottom: none; }
+    .review-author { font-size: 0.74rem; color: var(--muted); margin-bottom: 3px; }
+    .no-reviews { font-size: 0.82rem; color: var(--muted); padding: 8px 0; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+    .section-label { font-size: 0.76rem; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 12px; }
+    .action-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.93rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.02em;
+    }
+    .btn:active { opacity: 0.8; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+    .btn-primary   { background: var(--primary); color: white; }
+    .btn-secondary { background: var(--primary-light); color: var(--primary-dark); border: 1px solid var(--border); }
+    .btn-ghost     { background: transparent; color: var(--muted); border: 1px solid var(--border); font-size: 0.88rem; padding: 11px; }
+
+    /* QR誘導メッセージ */
+    .qr-notice {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 0.83rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .form-section  { margin-bottom: 16px; }
+    .form-label    { display: block; font-size: 0.80rem; color: var(--muted); margin-bottom: 6px; }
+    .form-input, .form-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.93rem;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .form-textarea { height: 96px; resize: vertical; }
+    .form-input:focus, .form-textarea:focus { outline: none; border-color: var(--primary); }
+    .status-info {
+      background: var(--borrowed-bg);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      font-size: 0.85rem;
+      color: var(--borrowed-fg);
+      line-height: 1.7;
+    }
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--primary-dark);
+      color: white;
+      padding: 12px 22px;
+      border-radius: 6px;
+      font-size: 0.87rem;
+      z-index: 200;
+      opacity: 0;
+      transition: opacity 0.3s;
+      white-space: nowrap;
+      max-width: 88vw;
+      text-align: center;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>港の図書室</h1>
+  <div class="curator-block">
+    <div class="curator-block-label">管理人より</div>
+    いわき市中之作のゲストハウスenotoの本棚「港の図書室」です。貸出・返却のお手続き、紹介文やレビューの閲覧はこちらから。
+  </div>
+</header>
+
+<div class="controls">
+  <input type="search" id="searchInput" placeholder="書名・著者で検索" oninput="filterBooks()" />
+  <select id="categoryFilter" onchange="filterBooks()">
+    <option value="">すべて</option>
+  </select>
+</div>
+
+<div class="book-grid" id="bookGrid">
+  <div class="loading">読み込み中...</div>
+</div>
+
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div id="sheetContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // URLからアクセスキーを読み取り、URLバーからは削除する
+  const urlParams = new URLSearchParams(window.location.search);
+  const accessKey = urlParams.get('key') || '';
+  if (accessKey) {
+    history.replaceState({}, '', window.location.pathname);
+  }
+
+  let allBooks = [];
+  let selectedBook = null;
+
+  async function loadBooks() {
+    try {
+      const res = await fetch('/api/books');
+      allBooks = await res.json();
+      renderBooks(allBooks);
+      buildCategoryFilter(allBooks);
+    } catch {
+      document.getElementById('bookGrid').innerHTML =
+        '<div class="empty">データを取得できませんでした。</div>';
+    }
+  }
+
+  function buildCategoryFilter(books) {
+    const cats = [...new Set(books.map(b => b.category).filter(Boolean))].sort();
+    const sel = document.getElementById('categoryFilter');
+    cats.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    });
+  }
+
+  function filterBooks() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const cat = document.getElementById('categoryFilter').value;
+    const filtered = allBooks.filter(b => {
+      const t = !q || b.title.toLowerCase().includes(q) || (b.author||'').toLowerCase().includes(q);
+      const c = !cat || b.category === cat;
+      return t && c;
+    });
+    renderBooks(filtered);
+  }
+
+  function filterCurrentBooks() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const cat = document.getElementById('categoryFilter').value;
+    return allBooks.filter(b => {
+      const t = !q || b.title.toLowerCase().includes(q) || (b.author||'').toLowerCase().includes(q);
+      const c = !cat || b.category === cat;
+      return t && c;
+    });
+  }
+
+  function renderBooks(books) {
+    const grid = document.getElementById('bookGrid');
+    if (!books.length) {
+      grid.innerHTML = '<div class="empty">該当する本がありません。</div>';
+      return;
+    }
+    grid.innerHTML = books.map(b => `
+      <div class="book-card" onclick="openSheet('${b.id}')">
+        <div class="book-cover">
+          ${b.cover
+            ? `<img src="${b.cover}" alt="${esc(b.title)}" loading="lazy">`
+            : `<div class="book-cover-placeholder">本</div>`}
+        </div>
+        <div class="book-info">
+          <div class="book-title">${esc(b.title)}</div>
+          <div class="book-author">${esc(b.author)}</div>
+          <span class="badge ${b.status === '貸出可能' ? 'badge-available' : 'badge-borrowed'}">
+            ${b.status === '貸出可能' ? '貸出可能' : '貸出中'}
+          </span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function openSheet(bookId) {
+    selectedBook = allBooks.find(b => b.id === bookId);
+    if (!selectedBook) return;
+
+    let reviews = [];
+    try {
+      const res = await fetch(`/api/reviews?bookId=${bookId}`);
+      reviews = await res.json();
+    } catch { reviews = []; }
+
+    const b = selectedBook;
+    const isAvailable = b.status === '貸出可能';
+
+    const reviewsHtml = reviews.length
+      ? reviews.map(r => `
+          <div class="review-item">
+            <div class="review-author">${esc(r.reviewerName)}</div>
+            ${esc(r.comment)}
+          </div>`).join('')
+      : '<div class="no-reviews">まだ感想はありません。</div>';
+
+    // アクセスキーがあるかどうかで貸出・返却ボタンの表示を切り替える
+    let actionHtml;
+    if (accessKey) {
+      if (isAvailable) {
+        actionHtml = `<button class="btn btn-primary" onclick="showBorrowForm()">この本を借りる</button>`;
+      } else {
+        actionHtml = `
+          <div class="status-info">${esc(b.borrower)} さんが借りています。</div>
+          <button class="btn btn-secondary" onclick="showReturnForm()">返却する</button>
+        `;
+      }
+    } else {
+      // キーなし＝QR未経由のアクセス：貸出・返却ボタンを出さず案内のみ
+      actionHtml = `
+        <div class="qr-notice">
+          貸出・返却の手続きは<br>本棚に掲示されているQRコードからお進みください。
+        </div>
+      `;
+    }
+
+    document.getElementById('sheetContent').innerHTML = `
+      <h2>${esc(b.title)}</h2>
+      <div class="book-meta">${esc(b.author)}${b.category ? '　' + esc(b.category) : ''}</div>
+      ${b.comment ? `
+        <div class="curator-comment">
+          <div class="curator-comment-label">管理人のひとこと</div>
+          ${esc(b.comment)}
+        </div>` : ''}
+      <div class="reviews-label">読んだ方の感想</div>
+      ${reviewsHtml}
+      <hr class="divider">
+      <div class="action-buttons">
+        ${actionHtml}
+        <button class="btn btn-ghost" onclick="showReviewForm()">感想を書く</button>
+        <button class="btn btn-ghost" onclick="closeSheet()">閉じる</button>
+      </div>
+    `;
+    document.getElementById('overlay').classList.add('open');
+  }
+
+  // ── 貸出フォーム ──
+  function showBorrowForm() {
+    document.getElementById('sheetContent').innerHTML = `
+      <h2 style="margin-bottom:18px">${esc(selectedBook.title)}</h2>
+      <div class="form-section">
+        <label class="form-label">お名前（ニックネームでも可）</label>
+        <input class="form-input" type="text" id="borrowerName" placeholder="例：田中、旅人A" />
+      </div>
+      <div class="action-buttons">
+        <button class="btn btn-primary" id="borrowBtn" onclick="submitBorrow()">借りる</button>
+        <button class="btn btn-ghost" onclick="openSheet('${selectedBook.id}')">戻る</button>
+      </div>
+    `;
+  }
+
+  async function submitBorrow() {
+    const name = document.getElementById('borrowerName').value.trim();
+    if (!name) { showToast('お名前を入力してください'); return; }
+    const btn = document.getElementById('borrowBtn');
+    btn.disabled = true; btn.textContent = '処理中...';
+    try {
+      const res = await fetch('/api/borrow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId: selectedBook.id, borrowerName: name, accessKey }),
+      });
+      const data = await res.json();
+      if (data.error === 'unauthorized') {
+        showToast('アクセスが許可されていません。QRコードから再度お試しください。');
+        btn.disabled = false; btn.textContent = '借りる';
+        return;
+      }
+      if (!res.ok) throw new Error();
+
+      // ローカル状態を即時更新
+      const book = allBooks.find(b => b.id === selectedBook.id);
+      if (book) { book.status = '貸出中'; book.borrower = name; }
+      selectedBook.status = '貸出中';
+      renderBooks(filterCurrentBooks());
+
+      document.getElementById('sheetContent').innerHTML = `
+        <h2 style="margin-bottom:10px">${esc(selectedBook.title)}</h2>
+        <div class="book-meta" style="margin-bottom:20px">貸出が完了しました。どうぞお楽しみください。</div>
+        <div class="action-buttons">
+          <button class="btn btn-ghost" onclick="closeSheet()">閉じる</button>
+        </div>
+      `;
+    } catch {
+      showToast('エラーが発生しました。もう一度お試しください。');
+      btn.disabled = false; btn.textContent = '借りる';
+    }
+  }
+
+  // ── 返却フォーム（PIN不要・キー認証のみ） ──
+  function showReturnForm() {
+    document.getElementById('sheetContent').innerHTML = `
+      <h2 style="margin-bottom:10px">${esc(selectedBook.title)}</h2>
+      <div class="status-info" style="margin-bottom:18px">
+        この本を返却します。よろしいですか？
+      </div>
+      <div class="action-buttons">
+        <button class="btn btn-secondary" id="returnBtn" onclick="submitReturn()">返却する</button>
+        <button class="btn btn-ghost" onclick="openSheet('${selectedBook.id}')">戻る</button>
+      </div>
+    `;
+  }
+
+  async function submitReturn() {
+    const btn = document.getElementById('returnBtn');
+    btn.disabled = true; btn.textContent = '処理中...';
+    try {
+      const res = await fetch('/api/return', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId: selectedBook.id, accessKey }),
+      });
+      const data = await res.json();
+      if (data.error === 'unauthorized') {
+        showToast('アクセスが許可されていません。QRコードから再度お試しください。');
+        btn.disabled = false; btn.textContent = '返却する';
+        return;
+      }
+      if (!res.ok) throw new Error();
+
+      // ローカル状態を即時更新
+      const book = allBooks.find(b => b.id === selectedBook.id);
+      if (book) { book.status = '貸出可能'; book.borrower = ''; }
+      selectedBook.status = '貸出可能';
+      renderBooks(filterCurrentBooks());
+
+      // 返却後にレビューを促す
+      showReturnedReviewPrompt();
+    } catch {
+      showToast('エラーが発生しました。もう一度お試しください。');
+      btn.disabled = false; btn.textContent = '返却する';
+    }
+  }
+
+  function showReturnedReviewPrompt() {
+    document.getElementById('sheetContent').innerHTML = `
+      <h2 style="margin-bottom:6px">${esc(selectedBook.title)}</h2>
+      <div class="book-meta" style="margin-bottom:18px">返却が完了しました。ありがとうございました。</div>
+      <hr class="divider">
+      <div class="section-label">読んだ感想をひとこと残しませんか（任意）</div>
+      <div class="form-section">
+        <label class="form-label">お名前</label>
+        <input class="form-input" type="text" id="reviewerName" placeholder="ニックネームでも可" />
+      </div>
+      <div class="form-section">
+        <label class="form-label">感想</label>
+        <textarea class="form-textarea" id="reviewComment" placeholder="次に読む方の参考になります..."></textarea>
+      </div>
+      <div class="action-buttons">
+        <button class="btn btn-primary" id="reviewBtn" onclick="submitReview(true)">感想を投稿して閉じる</button>
+        <button class="btn btn-ghost" onclick="closeSheet()">投稿せずに閉じる</button>
+      </div>
+    `;
+  }
+
+  // ── レビューフォーム（感想は誰でも投稿可能） ──
+  function showReviewForm() {
+    document.getElementById('sheetContent').innerHTML = `
+      <h2 style="margin-bottom:18px">${esc(selectedBook.title)}</h2>
+      <div class="form-section">
+        <label class="form-label">お名前</label>
+        <input class="form-input" type="text" id="reviewerName" placeholder="ニックネームでも可" />
+      </div>
+      <div class="form-section">
+        <label class="form-label">感想</label>
+        <textarea class="form-textarea" id="reviewComment" placeholder="読んでみての感想をどうぞ..."></textarea>
+      </div>
+      <div class="action-buttons">
+        <button class="btn btn-primary" id="reviewBtn" onclick="submitReview(false)">投稿する</button>
+        <button class="btn btn-ghost" onclick="openSheet('${selectedBook.id}')">戻る</button>
+      </div>
+    `;
+  }
+
+  async function submitReview(afterReturn) {
+    const name    = document.getElementById('reviewerName').value.trim();
+    const comment = document.getElementById('reviewComment').value.trim();
+    if (!name)    { showToast('お名前を入力してください'); return; }
+    if (!comment) { showToast('感想を入力してください'); return; }
+    const btn = document.getElementById('reviewBtn');
+    btn.disabled = true; btn.textContent = '送信中...';
+    try {
+      const res = await fetch('/api/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookId: selectedBook.id, reviewerName: name, comment }),
+      });
+      if (!res.ok) throw new Error();
+      showToast('感想を投稿しました。ありがとうございます。');
+      closeSheet();
+    } catch {
+      showToast('エラーが発生しました。もう一度お試しください。');
+      btn.disabled = false;
+      btn.textContent = afterReturn ? '感想を投稿して閉じる' : '投稿する';
+    }
+  }
+
+  function overlayClick(e) {
+    if (e.target === document.getElementById('overlay')) closeSheet();
+  }
+
+  function closeSheet() {
+    document.getElementById('overlay').classList.remove('open');
+    selectedBook = null;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  loadBooks();
+</script>
+</body>
+</html>
